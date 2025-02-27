@@ -1,0 +1,326 @@
+
+%% version 2
+% load phens
+D = readtable('/Users/kayla/Library/CloudStorage/Box-Box/ThesisLab_April2021/ReplicationProject/Data/sensitivity_phenotypes_dep.tsv','FileType','text');
+D = standardizeMissing(D,-3); D = standardizeMissing(D,-1); D = standardizeMissing(D,-818); D = standardizeMissing(D,-121); D = standardizeMissing(D,-7); D = standardizeMissing(D,-999);
+temp_phens_old = [D.x21003_0_0, D.x31_0_0, D.x23104_2_0, D.x2443_2_0, D.x20116_2_0, D.x4079_2_1, D.x4080_2_1, D.x2178_2_0, D.x20433_0_0, D.x20442_0_0, D.x2050_2_0, D.x2060_2_0, D.x2070_2_0, D.x2080_2_0, D.x20514_0_0, D.x20510_0_0, D.x20517_0_0, D.x20519_0_0, D.x20511_0_0, D.x20507_0_0, D.x20508_0_0, D.x20518_0_0, D.x20513_0_0, D.x20506_0_0, D.x20509_0_0, D.x20520_0_0, D.x20515_0_0, D.x20516_0_0, D.x20505_0_0, D.x20512_0_0, D.x30710_0_0];
+clear D
+
+%load cluster assignments
+% load('DrysdalePriceMaglanocLamers_clusters_keep.mat')
+load('DrysdalePriceMaglanocLamers_clusters.mat')
+
+% get resuuuults
+names = {'Drysdale', 'Price', 'Maglanoc', 'Lamers'};
+
+%% run for clinical 
+temp_phens_keep = temp_phens(ie, :);
+[R2_1, R2_2, deltaR, max_deltaR] = deltaR2_buff(clusters, clinical);
+% for z = 1:length(temp_phens)
+%         R2_1{z} = [names, R2_1{z}];
+% end
+
+%save('clinical_phens_crp.mat', 'R2_1', 'R2_2', 'deltaR', 'max_deltaR')
+
+%% RUN AND LEAVE IT
+%[R2_1, R2_2, deltaR, max_deltaR] = deltaR2_buff(keep, temp_phens_keep);
+[R2_1_i, R2_2_i, deltaR_i, max_deltaR_i] = deltaR2_buff(clusters, imaging);
+
+%% for imaging
+%FA_GMV_IDP = readtable('sensitivity_FA_GMV_IDP_dep.tsv', 'FileType', 'text');
+
+[R2_1_i, R2_2_i, deltaR_i, max_deltaR_i] = deltaR2_buff(clusters, FA_GMV_IDP);
+save('imaging_phens_results.mat', 'R2_1_i', 'R2_2_i', 'deltaR_i', 'max_deltaR_i')
+imaging_names = FA_GMV_IDP.Properties.VariableNames;
+clear FA_GMV_IDP
+
+%% delta R2 sensitivity
+% need deltaR/deltaR_i and max_deltaR/max_deltaR_i
+% find the phens where deltaR is greater than max deltaR, those are
+% significant
+for i = 1:size(deltaR_c, 2)
+   pval = deltaR_c{i} - max_deltaR_c{i}; 
+   sig_c{i} = pval > 0;
+end
+for i = 1:size(sig_c,2)
+    track_c(i) = sum(sum(sig_c{i}));
+end
+%%%%%%%%%essentially Maglanoc is more sensitive than Lamers in most? Am I
+%%%%%%%%%reading that right? or is it just saying there is a difference,
+%%%%%%%%%the direction is not apparent?
+
+
+for i = 1:size(deltaR_i, 2)
+   pval_i = deltaR_i{i} - max_deltaR_i{i}; 
+   sig_i{i} = pval > 0;
+end 
+for i = 1:size(sig_i,2)
+    track_i(i) = sum(sum(sig_i{i}));
+end
+%%%%%% there's not a single significant delta R2 here
+
+%% significant delta Rs
+%load
+% load('imaging_phens_results.mat')
+%%find when max deltaR is less than deltaR
+[keep_sig_c] = sigsfor_deltaR(deltaR_c, max_deltaR_c, clusters);
+%% make a figure to show the R2 for the significant clusters
+% for all the keep_sig = 1, bar plot R2_1 for that study and phenotype and pull
+% the names
+% for all the keep_sig = 2, bar plot R2_2 for that study and phenotype and pull
+% the names
+
+% make a file that's the cluster name1 - cluster name 2
+%name_grid = ["Drysdale-Drysdale", "Price-Drysdale", "Maglanoc-Drysdale", "Lamers-Drysdale"; "Drysdale-Price", "Price-Price", "Maglanoc-Price", "Lamers-Price"; "Drysdale-Maglanoc", "Price-Maglanoc", "Maglanoc-Maglanoc", "Lamers-Maglanoc"; "Drysdale-Lamers", "Price-Lamers", "Maglanoc-Lamers", "Lamers-Lamers"];
+
+for z = 1:size(deltaR_c, 2)
+%     phen_name = temp_phens_names{z};
+    pick1{z}(1,:) = name_grid(keep_sig{z} == 1);
+    pick1{z}(2,:) = R2_1{z}(keep_sig{z} == 1);
+    pick2{z}(1,:) = name_grid(keep_sig{z} == 2);
+    pick2{z}(2,:) = R2_1{z}(keep_sig{z} == 2);
+%       info(1,z) = temp_phens_names{z};
+%       info(2,z) = name_grid(keep_sig{z} == 1);
+%       %info(2,z) = name_grid(keep_sig{z} == 2);
+%       info(3,z) = R2_1{z}(keep_sig{z} == 1);
+      %info(3,z) = R2_2{z}(keep_sig{z} == 2);
+end
+
+
+for z = 1:size(keep_sig_i,2)
+    sums_i(z) = sum(sum(keep_sig_i{z}));
+end
+ugh_i = sums_i > 0;
+for z = 1:size(keep_sig_c,2)
+    sums(z) = sum(sum(keep_sig_c{z}));
+end
+ugh_c = sums > 0;
+phens_names_keep = temp_phens_names(ugh_c);
+imaging_names_keep = imaging_names(ugh_i); %this gets rid eid because it wasn't significant but later we should deal with the fact I left eid in to the deltaR_buff 
+
+%% figure for sig delta Rs (attempt 2)
+% find the phenotypes that have have significant deltaR
+% get the mean for each cluster for each approach
+for z = 1:size(temp_phens, 2)
+for i = 1:size(clusters, 2)
+    for j = 1:max(clusters(:,i))
+        phen_avg(z, i, j) = nanmean(temp_phens(clusters(:, i) == j, z));
+    end
+end
+end
+phen_avg_keep = phen_avg(ugh_c, :, :);
+
+%imaging = FA_GMV_IDP{:,2:end};
+%small_imaging = imaging(:,1:15);
+for z = 1:size(imaging, 2)
+for i = 1:size(clusters, 2)
+    for j = 1:max(clusters(:,i))
+        imag_avg(z, i, j) = nanmean(imaging(clusters(:, i) == j, z));
+        %%%%%%% why's it mostly nans?
+    end
+end
+end
+imag_avg_keep = imag_avg(ugh_i(2:end), :, :);
+
+%% this is a way to visualize the mean but we'll do something else
+addpath('/Users/kayla/Library/CloudStorage/Box-Box/ThesisLab_April2021/ReplicationProject/Code/plotBarStackGroups')
+plotBarStackGroups(phen_avg, temp_phens_names) % I want this to be mean of the phenotype for the cluster
+%xlabel('Cluster mean')
+%ylabel('Clinical Phenotype')
+%set(gca,'YLim',[0 length(phen_avg_keep)+1],'YTick',1:1:length(phen_avg_keep))
+%yticklabels(temp_phens_names)
+title('Mean of each cluster for each phenotype')
+% I don't love this but it's the best I've got so far
+plotBarStackGroups(imag_avg_keep, imaging_names_keep) % I want this to be mean of the phenotype for the cluster
+plotBarStackGroups(phen_avg_keep, phens_names_keep) % I want this to be mean of the phenotype for the cluster
+title('Average mean for clusters for each phenotype, per cluster approach')
+ylabel('Mean')
+xlabel('Clinical Feature')
+%%
+
+space = 3;
+pos1 = [2 5 8 11 14 17];
+pos2 = [2.7 5.7 8.7 11.7 14.7 17.7];
+
+hold on
+violin({cog_nanless{1}(kms_cog{1}==1, :), cog_nanless{2}(kms_cog{2}==1, :), cog_nanless{3}(kms_cog{3}==1, :), cog_nanless{4}(kms_cog{4}==1, :), cog_nanless{6}(kms_cog{6}==1, :), cog_nanless{5}(kms_cog{5}==1, :)}, 'x', pos1 ,'facecolor', [0.5 0.5 0.5], 'medc', '')
+violin({cog_nanless{1}(kms_cog{1}==2, :), cog_nanless{2}(kms_cog{2}==2, :), cog_nanless{3}(kms_cog{3}==2, :), cog_nanless{4}(kms_cog{4}==2, :), cog_nanless{6}(kms_cog{6}==2, :), cog_nanless{5}(kms_cog{5}==2, :)}, 'x', pos2 ,'facecolor', [0.6 0.8 1], 'medc', '')
+
+hold off
+set(gca,'xticklabel',{'Anhedonia', 'Depressed Mood', 'Somatic Disturbance', 'Chronicity', 'Acute Impairment', 'Late Onset'})
+xpos = mean([pos1; pos2],1);
+xticks(xpos)
+xlim([0, max(xpos)+space/2])
+ylabel('Cognition Score')
+title('Cognition Cluster Validation')
+set(gca,'FontSize',14)
+t = annotation('textbox', [0.78, 0.75, 0.1, 0.1], 'String', "**");
+t.LineStyle = 'none';
+t.FontSize = 24;
+t = annotation('textbox', [0.85, 0.75, 0.1, 0.1], 'String', "**");
+t.LineStyle = 'none';
+t.FontSize = 24;
+%% function to get delta R and max shiffled delta R
+function [pval, R2] = fitglm_pval(clusters, phenotypes)
+for z = 1:size(phenotypes, 2)
+    for x = 1:size(clusters, 2)
+        if istable(phenotypes)
+            phenotype = phenotypes{:,z};
+        else
+            phenotype = phenotypes(:,z);
+        end
+        
+        % select cluster assignments
+        clust_assign = clusters(:,x);
+        
+        % prep data
+        nans = find(isnan(clust_assign));
+        clust_assign(nans) = [];
+        phenotype(nans) = [];
+        nans = find(isnan(phenotype));
+        clust_assign(nans) = [];
+        phenotype(nans) = [];
+        
+        % GLM
+        mdl = fitglm(categorical(clust_assign), phenotype);
+        pval{z,:}(x) = coefTest(mdl);
+        R2{z,:}(x) = mdl.Rsquared.Adjusted; %should this also be adjusted?
+    end
+end
+end
+
+
+function [R2_1, R2_2, deltaR, max_deltaR] = deltaR2_buff(clusters, phenotypes)
+% R2_1 = zeros(size(phenotypes, 2), size(clusters, 2));
+% R2_2 = zeros(size(phenotypes, 2), size(clusters, 2));
+% max_deltaR = zeros(size(phenotypes, 2), size(clusters, 2), size(clusters, 2));
+
+for z = 1:size(phenotypes, 2)
+    for x = 1:size(clusters, 2)
+        for y = (x+1):size(clusters, 2)
+            if istable(phenotypes)
+                phenotype = phenotypes{:,z};
+            else
+                phenotype = phenotypes(:,z);
+            end
+
+            % select cluster assignments 
+            clust_assign1 = clusters(:,x);
+            clust_assign2 = clusters(:,y);
+            
+            % prep data
+            nans = find(isnan(clust_assign1));
+            clust_assign1(nans) = [];
+            clust_assign2(nans) = [];
+            phenotype(nans) = [];
+            nans = find(isnan(clust_assign2));
+            clust_assign1(nans) = [];
+            clust_assign2(nans) = [];
+            phenotype(nans) = [];
+            nans = find(isnan(phenotype));
+            clust_assign1(nans) = [];
+            clust_assign2(nans) = [];
+            phenotype(nans) = [];
+            
+            % GLM
+            mdl1 = fitglm(categorical(clust_assign1), phenotype);
+            mdl2 = fitglm(categorical(clust_assign2), phenotype);
+            
+            %%R squared
+            R2_1{z}(x, y) = mdl1.Rsquared.Adjusted;
+            R2_2{z}(x, y) = mdl2.Rsquared.Adjusted;
+            
+            %%delta R2 between subtypes approaches?
+            %R2(i) - R2(j)
+            deltaR{z}(x, y) = R2_1{z}(x, y) - R2_2{z}(x, y);
+            
+            %%permutation analysis
+            % shuffle membership label of clusters
+            % shuffle 2000 times
+            for i = 1:2000
+                idx = randperm(length(clust_assign1));
+                clust_assign1_shuff = clust_assign1(idx);
+                clust_assign2_shuff = clust_assign2(idx );
+                mdl1_shuff = fitglm(categorical(clust_assign1_shuff(:,1)), phenotype(:,1));
+                R2_1_shuff = mdl1_shuff.Rsquared.Adjusted;
+                mdl2_shuff = fitglm(categorical(clust_assign2_shuff(:,1)), phenotype(:,1));
+                R2_2_shuff = mdl2_shuff.Rsquared.Adjusted;
+                deltaR_shuff(i) = R2_1_shuff - R2_2_shuff;
+            end
+            % get maximum delta R2 of the 15 pairwise comparisons for each 2000
+            max_deltaR{z}(x, y) = max(abs(deltaR_shuff));
+        end
+        
+    end
+end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [R2_1, R2_2, deltaR, max_deltaR] = deltaR2(clust_assign1, clust_assign2, phenotype)
+% prep
+nans = find(isnan(clust_assign1));
+clust_assign1(nans) = [];
+clust_assign2(nans) = [];
+phenotype(nans) = [];
+nans = find(isnan(clust_assign2));
+clust_assign1(nans) = [];
+clust_assign2(nans) = [];
+phenotype(nans) = [];
+nans = find(isnan(phenotype));
+clust_assign1(nans) = [];
+clust_assign2(nans) = [];
+phenotype(nans) = [];
+
+% GLM
+mdl1 = fitglm(categorical(clust_assign1), phenotype);
+mdl2 = fitglm(categorical(clust_assign2), phenotype);
+
+%%R squared
+R2_1 = mdl1.Rsquared.Adjusted;
+R2_2 = mdl2.Rsquared.Adjusted;
+
+%%delta R2 between subtypes approaches?
+%R2(i) - R2(j)
+deltaR = R2_1-R2_2;
+
+%%permutation analysis
+% shuffle membership label of clusters
+% shuffle 2000 times
+for i = 1:2000
+    clust_assign1_shuff = clust_assign1(randperm(length(clust_assign1)));
+    clust_assign2_shuff = clust_assign2(randperm(length(clust_assign2)));
+    mdl1_shuff = fitglm(clust_assign1_shuff(:,1), phenotype(:,1));
+    R2_1_shuff = mdl1_shuff.Rsquared.Ordinary;
+    mdl2_shuff = fitglm(clust_assign2_shuff(:,1), phenotype(:,1));
+    R2_2_shuff = mdl2_shuff.Rsquared.Ordinary;
+    deltaR_shuff(i) = R2_1_shuff - R2_2_shuff;
+end
+max_deltaR = max(abs(deltaR_shuff));
+end
+% get maximum delta R2 of the 15 pairwise comparisons for each 2000 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [keep_sig_i] = sigsfor_deltaR(deltaR_i, max_deltaR_i, clusters)
+for z = 1:size(deltaR_i, 2)
+    for x = 1:size(clusters, 2)
+        for y = (x+1):size(clusters, 2)
+test_i{z} = abs(deltaR_i{z}) - max_deltaR_i{z};
+test2_i{z} = abs(deltaR_i{z}) > max_deltaR_i{z};
+if test2_i{z}(x,y) == 1
+    if deltaR_i{z}(x,y) > 0
+        keep_sig_i{z}(x,y) = 1; % 1 stands for R2_1
+    elseif deltaR_i{z}(x,y) < 0
+            keep_sig_i{z}(x,y) = 2; %2 stands for R2_2
+    else 
+        keep_sig_i{z}(x,y) = 0;
+        end
+else
+    keep_sig_i{z}(x,y) = 0;
+end
+%             R2_1{z}(keep{z}=1)
+%             R2_2{z}(keep{z}=2)
+        end
+    end
+end
+end
